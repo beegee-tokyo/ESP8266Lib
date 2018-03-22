@@ -1,6 +1,9 @@
 #include "wifiLib.h"
 #include "wifiLibPrivate.h"
 
+/** Flag if main app uses the watchdog */
+bool wdtEnabled = false;
+
 /** Connection status */
 byte connStatus = CON_LOST;
 
@@ -21,11 +24,15 @@ WiFiEventHandler connectedEventHandler;
 WiFiEventHandler disconnectedEventHandler;
 WiFiEventHandler gotIPEventHandler;
 
+/** WiFiUDP class for listening to UDP broadcasts */
+WiFiUDP udpListener;
+
 /**
 	 gotCon
 	 called when connection to AP was successfull
 */
 void gotCon(const WiFiEventStationModeConnected& evt) {
+	if (wdtEnabled) wdt_reset();
 	if (connStatus == CON_INIT) {
 		Serial.println("Got connection after " + String((millis()-wifiConnectStart)/1000) + "s");
 		Serial.println("SSID: " + String(evt.ssid));
@@ -44,6 +51,7 @@ void gotCon(const WiFiEventStationModeConnected& evt) {
 	 called when WiFi got disconnected
 */
 void lostCon(const WiFiEventStationModeDisconnected& evt) {
+	if (wdtEnabled) wdt_reset();
 	if ((connStatus == CON_GOTIP) || (connStatus == CON_START)) {
 		Serial.println("Lost connection");
 		connStatus = CON_LOST;
@@ -59,6 +67,7 @@ void lostCon(const WiFiEventStationModeDisconnected& evt) {
 	 called when IP address was assigned
 */
 void gotIP(const WiFiEventStationModeGotIP& evt) {
+	if (wdtEnabled) wdt_reset();
 	if (connStatus == CON_START) {
 		Serial.println("Got IP after " + String((millis()-wifiConnectStart)/1000) + "s");
 		connStatus = CON_GOTIP;
@@ -76,17 +85,18 @@ void gotIP(const WiFiEventStationModeGotIP& evt) {
 	 starts a connection
 */
 void connectWiFi() {
+	if (wdtEnabled) wdt_reset();
 	// Switch on both LED's
 	digitalWrite(actLED, LOW);	
 	digitalWrite(comLED, LOW);
 
 	// Connect to Wifi.
 	WiFi.disconnect();
-	// delay(500);
 	WiFi.mode(WIFI_STA);
 	WiFi.setAutoReconnect(false);
 	Serial.println();
 	Serial.print("Start connection to ");
+	if (wdtEnabled) wdt_reset();
 	if (usePrimAP) {
 		Serial.println(ssidPrim);
 		WiFi.begin(ssidPrim, pwPrim);
@@ -134,6 +144,7 @@ bool scanWiFi() {
 	
 	wifiConnectStart = millis();
 	doubleLedFlashStart(0.25);
+	if (wdtEnabled) wdt_reset();
 	int apNum = WiFi.scanNetworks();
 	if (apNum == 0) {
 		Serial.println("Found no networks?????");
@@ -144,6 +155,7 @@ bool scanWiFi() {
 	byte foundAP = 0;
 	bool foundPrim = false;
 
+	if (wdtEnabled) wdt_reset();
 	for (int index=0; index<apNum; index++) {
 		String ssid = WiFi.SSID(index);
 		Serial.println("Found AP: " + ssid + " RSSI: " + WiFi.RSSI(index));
@@ -191,6 +203,7 @@ bool scanWiFi() {
 	 Check current WiFi status and try to reconnect if necessary
 */
 void checkWiFiStatus() {
+	if (wdtEnabled) wdt_reset();
 	// Check if connection initialization was successfull
 	if ((connStatus == CON_INIT) || (connStatus == CON_START)) {
 		if ((millis() - wifiConnectStart) > 10000) {
@@ -201,6 +214,7 @@ void checkWiFiStatus() {
 			connectWiFi();
 		}
 	}
+	if (wdtEnabled) wdt_reset();
 	// Check if connection was lost
 	if (connStatus == CON_LOST) {
 		Serial.println("WiFi connection lost");
@@ -216,9 +230,9 @@ void checkWiFiStatus() {
 	 initOTA
 	 initializes OTA updates
 */
-void initOTA() {
+void initOTA(char hostApName[]) {
 	// Create device ID from MAC address
-	char hostApName[] = "MHC-Lan-xxxxxxxx";
+	// char hostApName[] = "MHC-Lan-xxxxxxxx";
 	String macAddress = WiFi.macAddress();
 	hostApName[8] = macAddress[0];
 	hostApName[9] = macAddress[1];
@@ -257,4 +271,131 @@ void initOTA() {
 	ArduinoOTA.begin();
 
 	MDNS.addServiceTxt("arduino", "tcp", "board", "ESP8266");
+}
+
+/**
+	 sendDebug
+	 send debug message over TCP
+*/
+void sendDebug(String debugMsg, String senderID) {
+	if (connStatus == CON_GOTIP) {
+		doubleLedFlashStart(0.5);
+		/** WiFiClient class to create TCP communication */
+		WiFiClient tcpDebugClient;
+
+		if (!tcpDebugClient.connect(ipDebug, tcpDebugPort)) {
+			Serial.println("connection to Debug Android " + String(ipDebug[0]) + "." + String(ipDebug[1]) + "." + String(ipDebug[2]) + "." + String(ipDebug[3]) + " failed");
+			tcpDebugClient.stop();
+			doubleLedFlashStop();
+			return;
+		}
+
+		// String sendMsg = OTA_HOST;
+		debugMsg = senderID + " " + debugMsg;
+		tcpDebugClient.print(debugMsg);
+
+		tcpDebugClient.stop();
+		doubleLedFlashStop();
+	}
+}
+
+/**
+void sendRpiDebug(String debugMsg, String senderID) {
+	 sendDebug
+	 send debug message over TCP to Raspberry Pi
+*/
+void sendRpiDebug(String debugMsg, String senderID) {
+	if (connStatus == CON_GOTIP) {
+		doubleLedFlashStart(0.5);
+		/** WiFiClient class to create TCP communication */
+		WiFiClient tcpDebugClient;
+
+		if (!tcpDebugClient.connect(ipMonitor, tcpRpiDebugPort)) {
+			Serial.println("connection to Debug PC " + String(ipMonitor[0]) + "." + String(ipMonitor[1]) + "." + String(ipMonitor[2]) + "." + String(ipMonitor[3]) + " failed");
+			tcpDebugClient.stop();
+			doubleLedFlashStop();
+			// Send debug message as well to tablet
+			sendDebug(debugMsg, senderID);
+			return;
+		}
+
+		// String sendMsg = OTA_HOST;
+		debugMsg = senderID + " " + debugMsg;
+		tcpDebugClient.print(debugMsg);
+
+		tcpDebugClient.stop();
+
+		doubleLedFlashStop();
+
+		// Send debug message as well to tablet
+		sendDebug(debugMsg, "");
+	}
+}
+
+/**
+	startListenToUDPbroadcast
+	Start to listen for  UDP broadcast message
+*/
+void startListenToUDPbroadcast() {
+	// Start UDP listener
+	udpListener.begin(udpBcPort);
+}
+
+/**
+	stopListenToUDPbroadcast
+	Stop to listen for  UDP broadcast message
+*/
+void stopListenToUDPbroadcast() {
+	// Start UDP listener
+	udpListener.stop();
+}
+
+/**
+	getIdFromUDPbroadcast
+	Get active device IDs and IPs UDP broadcast message
+*/
+bool getIdFromUDPbroadcast(int udpMsgLength) {
+	doubleLedFlashStart(0.1);
+	bool result = false;
+	byte udpPacket[udpMsgLength+1];
+	IPAddress udpIP = udpListener.remoteIP();
+
+	udpListener.read(udpPacket, udpMsgLength);
+	udpPacket[udpMsgLength] = 0;
+
+	udpListener.flush(); // empty UDP buffer for next packet
+
+	// String debugMsg = "UDP broadcast from ";
+	// udpIP = udpListener.remoteIP();
+	// debugMsg += "Sender IP: " + String(udpIP[0]) + "." + String(udpIP[1]) + "." + String(udpIP[2]) + "." + String(udpIP[3]);
+	// debugMsg += "\n Msg: " + String((char *)udpPacket);
+	// sendDebug(debugMsg, "WIFI");
+
+	/** Buffer for incoming JSON string */
+	DynamicJsonBuffer jsonInBuffer;
+	/** Json object for incoming data */
+	JsonObject& jsonIn = jsonInBuffer.parseObject((char *)udpPacket);
+	if (jsonIn.success() && jsonIn.containsKey("de")) {
+		String device = jsonIn["de"]; //String device = jsonIn["device"];
+		// String test = "";
+		if (device == lightID) { // Found id for connected light device
+			lightIp = udpIP;
+			result = true;
+			// test = "Light ID: " + lightIp.toString();
+		} else if (device == camID) { // Found id for connected camera device
+			camIp = udpIP;
+			result = true;
+			// test = "Camera ID: " + camIp.toString();
+		} else if (device == secID) { // Found id for connected security device
+			secIp = udpIP;
+			result = true;
+			// test = "Security ID: " + secIp.toString();
+		}
+		// if (test != "") {
+		// 	Serial.println("Found connected " + test);
+		// 	sendDebug(test, "wifi.cpp");
+		// }
+	}
+	doubleLedFlashStop();
+	return result;
 }
