@@ -1,0 +1,33 @@
+#######################################
+# LED Methods (KEYWORD1)
+#######################################
+initLeds KEYWORD1
+actLedFlashStart KEYWORD1
+comLedFlashStart KEYWORD1
+doubleLedFlashStart KEYWORD1
+actLedFlashStop KEYWORD1
+comLedFlashStop KEYWORD1
+doubleLedFlashStop KEYWORD1
+
+#######################################
+# WiFI Methods (KEYWORD1)
+#######################################
+connectInit KEYWORD1
+connectWiFi KEYWORD1
+initOTA KEYWORD1
+scanWiFi KEYWORD1
+checkWiFiStatus KEYWORD1
+
+CON_INIT LITERAL1
+CON_START LITERAL1
+CON_GOTIP LITERAL1
+CON_LOST LITERAL1
+
+#######################################
+# NTP time Methods (KEYWORD1)
+#######################################
+tryGetTime KEYWORD1
+getNtpTime KEYWORD1
+sendNTPpacket KEYWORD1
+digitalClockDisplay KEYWORD1
+getDigits KEYWORD1
