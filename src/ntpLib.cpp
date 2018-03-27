@@ -48,18 +48,16 @@ time_t getNtpTime()
 	/** WiFiUDP class for creating UDP communication */
 	WiFiUDP udpNTP;
 	/** Definition of timezone */
-	const int timeZone = 8;     // Philippine time (GMT + 8h)
+	const int timeZone = 8;		 // Philippine time (GMT + 8h)
 
 	udpNTP.begin(5000);
 
 	while (udpNTP.parsePacket() > 0) ; // discard any previously received packets
-	// Serial.println("Transmit NTP Request");
 	sendNTPpacket(udpNTP);
 	uint32_t beginWait = millis();
 	while (millis() - beginWait < 1500) {
 		int size = udpNTP.parsePacket();
 		if (size >= NTP_PACKET_SIZE) {
-			// Serial.println("Receive NTP Response");
 			udpNTP.read(packetBuffer, NTP_PACKET_SIZE);	// read packet into the buffer
 			unsigned long secsSince1900;
 			// convert four bytes starting at location 40 to a long integer

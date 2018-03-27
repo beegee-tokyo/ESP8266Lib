@@ -1,17 +1,17 @@
 {
-    "name": "ESP8266-Lib",
-    "description": "Functions I use in all my ESP8266 projects",
-    "author": "Bernd Giesecke",
-    "homepage": "https://desire.giesecke.tk",
-    "contributors": "Bernd Giesecke",
-    "version": "0.0.0",
-    "url": "https://desire.giesecke.tk/ESP8266-Lib",
-    "keywords": [ "ESP8266" ],
-    "bugs": "beegee@giesecke.tk",
-    "license": "GNU General Public License v2.0",
-    "repository":
-      { "type" : "git"
-        , "url" : "https://github.com/beegee-tokyo/ESP8266-Lib.git"
-      },
-    "cpu" : [ "ESP8266" ]
+		"name": "ESP8266-Lib",
+		"description": "Functions I use in all my ESP8266 projects",
+		"author": "Bernd Giesecke",
+		"homepage": "https://desire.giesecke.tk",
+		"contributors": "Bernd Giesecke",
+		"version": "0.0.0",
+		"url": "https://desire.giesecke.tk/ESP8266-Lib",
+		"keywords": [ "ESP8266" ],
+		"bugs": "beegee@giesecke.tk",
+		"license": "GNU General Public License v2.0",
+		"repository":
+			{ "type" : "git"
+				, "url" : "https://github.com/beegee-tokyo/ESP8266-Lib.git"
+			},
+		"cpu" : [ "ESP8266" ]
 }

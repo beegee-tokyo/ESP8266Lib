@@ -12,6 +12,11 @@ uint8_t comLED = 2;
 /** Port for red LED */
 uint8_t actLED = 0;
 
+/** Flag if activity LED flashing is active */
+bool actLedAttached = false;
+/** Flag if communication LED flashing is active */
+bool comLedAttached = false;
+
 /**
  * Initialize LED pins
  */
@@ -29,29 +34,46 @@ void initLeds(uint8_t reqComLED, uint8_t reqActLED) {
  * Start flashing of red led
  */
 void actLedFlashStart(float flashTime) {
+	if (actLedAttached) {
+		actFlasher.detach();
+	}
 	actFlasher.attach(flashTime, actLedFlash);
+	actLedAttached = true;
 }
 
 /**
  * Start flashing of blue led
  */
 void comLedFlashStart(float flashTime) {
+	if (comLedAttached) {
+		comFlasher.detach();
+	}
 	comFlasher.attach(flashTime, comLedFlash);
+	comLedAttached = true;
 }
 
 /**
  * Start flashing of both led
  */
 void doubleLedFlashStart(float flashTime) {
+	if (actLedAttached) {
+		actFlasher.detach();
+	}
+	if (comLedAttached) {
+		comFlasher.detach();
+	}
 	digitalWrite(actLED, LOW); // Turn on red LED
 	digitalWrite(comLED, HIGH); // Turn off blue LED
 	doubleFlasher.attach(flashTime, doubleLedFlash);
+	actLedAttached = true;
+	comLedAttached = true;
 }
 
 /**
  * Start flashing of red led
  */
 void actLedFlashStop() {
+	actLedAttached = false;
 	digitalWrite(actLED, HIGH); // Turn off red LED
 	actFlasher.detach();
 }
@@ -60,6 +82,7 @@ void actLedFlashStop() {
  * Start flashing of blue led
  */
 void comLedFlashStop() {
+	comLedAttached = false;
 	digitalWrite(comLED, HIGH); // Turn off blue LED
 	comFlasher.detach();
 }
@@ -68,6 +91,8 @@ void comLedFlashStop() {
  * Start flashing of both led
  */
 void doubleLedFlashStop() {
+	actLedAttached = false;
+	comLedAttached = false;
 	digitalWrite(actLED, HIGH); // Turn off red LED
 	digitalWrite(comLED, HIGH); // Turn off blue LED
 	doubleFlasher.detach();

@@ -11,22 +11,23 @@
 
 /** Defines */
 /** Connection status */
-#define CON_INIT   0 // connection initialized
-#define CON_START  1 // connecting
+#define CON_INIT	 0 // connection initialized
+#define CON_START	1 // connecting
 #define CON_GOTIP	 2 // connected with IP
-#define CON_LOST   3 // disconnected
+#define CON_LOST	 3 // disconnected
 
 /** Global Variables */
 extern byte connStatus;
 extern bool usePrimAP;
 extern unsigned long wifiConnectStart;
-extern bool canSwitchAP;
+// extern bool canSwitchAP;
 extern WiFiUDP udpListener;
 extern int udpBcPort;
 extern int tcpComPort;
 extern int tcpDebugPort;
 extern int tcpRpiDebugPort;
 extern bool wdtEnabled;
+
 extern IPAddress multiIP;
 extern IPAddress ipMonitor;
 extern IPAddress ipCam1;
@@ -35,11 +36,16 @@ extern IPAddress ipDebug;
 
 extern String mhcIdTag;
 extern String secDevice;
+extern String camDevice;
+
+extern const char* ftpUser;
+extern const char* ftpPwd;
+extern const char* ftpUserlib;
+extern const char* ftpPwdlib;
 
 /** Functions */
 void connectInit(); // Initiates connection to WiFi
 void connectWiFi(); // Connects to a WiFi network
-void initOTA(char hostApName[]); // Initializes OTA
 bool scanWiFi(); // Scan for available networks
 void checkWiFiStatus(); // Check current WiFi connection status
 void sendDebug(String debugMsg, String senderID); // Send debug message over TCP

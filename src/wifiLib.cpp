@@ -8,13 +8,13 @@ bool wdtEnabled = false;
 byte connStatus = CON_LOST;
 
 /** Selected network 
-    true = use primary network
+		true = use primary network
 		false = use secondary network
 */
 bool usePrimAP = true;
 
 /** Flag if two networks are found */
-bool canSwitchAP = false;
+// bool canSwitchAP = false;
 
 /** Time connection init started */
 unsigned long wifiConnectStart;
@@ -132,13 +132,13 @@ void connectInit() {
 	 allowed networks makes sense
 
 	 @return <code>bool</code>
-	        True if at least one allowed network was found
+					True if at least one allowed network was found
 */
 bool scanWiFi() {
 	/** RSSI for primary network */
-	uint8_t rssiPrim;
+	int8_t rssiPrim;
 	/** RSSI for secondary network */
-	uint8_t rssiSec;
+	int8_t rssiSec;
 	/** Result of this function */
 	bool result = false;
 	
@@ -159,12 +159,12 @@ bool scanWiFi() {
 	for (int index=0; index<apNum; index++) {
 		String ssid = WiFi.SSID(index);
 		Serial.println("Found AP: " + ssid + " RSSI: " + WiFi.RSSI(index));
-		if (strcmp((const char*) &ssid[0], ssidPrim)) {
+		if (!strcmp((const char*) &ssid[0], ssidPrim)) {
 			foundAP++;
 			foundPrim = true;
 			rssiPrim = WiFi.RSSI(index);
 		}
-		if (strcmp((const char*) &ssid[0], ssidSec)) {
+		if (!strcmp((const char*) &ssid[0], ssidSec)) {
 			foundAP++;
 			rssiSec = WiFi.RSSI(index);
 		}
@@ -180,16 +180,14 @@ bool scanWiFi() {
 			} else {
 				usePrimAP = false;
 			}
-			canSwitchAP = false;
 			result = true;
 			break;
 		default:
-			if (rssiPrim < rssiSec) {
+			if (rssiPrim > rssiSec) {
 				usePrimAP = true; // RSSI of primary network is better
 			} else {
 				usePrimAP = false; // RSSI of secondary network is better
 			}
-			canSwitchAP = true;
 			result = true;
 			break;
 	}
@@ -209,8 +207,7 @@ void checkWiFiStatus() {
 		if ((millis() - wifiConnectStart) > 10000) {
 			Serial.println("WiFi connection failed for more than 10 seconds");
 			Serial.println(WiFi.localIP());
-			// Toggle WiFi AP
-			usePrimAP = !usePrimAP;
+			scanWiFi();
 			connectWiFi();
 		}
 	}
@@ -218,59 +215,10 @@ void checkWiFiStatus() {
 	// Check if connection was lost
 	if (connStatus == CON_LOST) {
 		Serial.println("WiFi connection lost");
-		// Toggle WiFi AP if we can
-		if (canSwitchAP) {
-			usePrimAP = !usePrimAP;
-		}
+		scanWiFi();
+		if (wdtEnabled) wdt_reset();
 		connectWiFi();
 	}
-}
-
-/**
-	 initOTA
-	 initializes OTA updates
-*/
-void initOTA(char hostApName[]) {
-	// Create device ID from MAC address
-	// char hostApName[] = "MHC-Lan-xxxxxxxx";
-	String macAddress = WiFi.macAddress();
-	hostApName[8] = macAddress[0];
-	hostApName[9] = macAddress[1];
-	hostApName[10] = macAddress[9];
-	hostApName[11] = macAddress[10];
-	hostApName[12] = macAddress[12];
-	hostApName[13] = macAddress[13];
-	hostApName[14] = macAddress[15];
-	hostApName[15] = macAddress[16];
-
-	ArduinoOTA.setHostname(hostApName);
-	Serial.println("OTA host name: "+ String(hostApName));
-
-	ArduinoOTA.onStart([]() {
-		Serial.println("OTA start");
-		digitalWrite(comLED, LOW); // Turn on blue LED
-		digitalWrite(actLED, HIGH); // Turn off red LED
-	});
-
-	ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-		digitalWrite(comLED, !digitalRead(comLED)); // Toggle blue LED
-		digitalWrite(actLED, !digitalRead(actLED)); // Toggle red LED
-	});
-
-	ArduinoOTA.onError([](ota_error_t error) {
-		digitalWrite(comLED, LOW); // Turn on blue LED
-		digitalWrite(actLED, LOW); // Turn on red LED
-	});
-
-	ArduinoOTA.onEnd([]() {
-		digitalWrite(comLED, HIGH); // Turn off blue LED
-		digitalWrite(actLED, HIGH); // Turn off red LED
-	});
-
-	// Start OTA server.
-	ArduinoOTA.begin();
-
-	MDNS.addServiceTxt("arduino", "tcp", "board", "ESP8266");
 }
 
 /**
@@ -334,7 +282,7 @@ void sendRpiDebug(String debugMsg, String senderID) {
 
 /**
 	startListenToUDPbroadcast
-	Start to listen for  UDP broadcast message
+	Start to listen for	UDP broadcast message
 */
 void startListenToUDPbroadcast() {
 	// Start UDP listener
@@ -343,7 +291,7 @@ void startListenToUDPbroadcast() {
 
 /**
 	stopListenToUDPbroadcast
-	Stop to listen for  UDP broadcast message
+	Stop to listen for	UDP broadcast message
 */
 void stopListenToUDPbroadcast() {
 	// Start UDP listener
